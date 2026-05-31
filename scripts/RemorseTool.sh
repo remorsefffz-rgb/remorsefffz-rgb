@@ -16,6 +16,52 @@ BLUE='\033[0;34m'
 MAGENTA='\033[0;35m'
 NC='\033[0m' # No Color
 
+# ============================================
+# ⚠️ VERIFICAÇÃO OBRIGATÓRIA DE ADB
+# ============================================
+
+verificar_adb_obrigatorio() {
+    echo -e "${MAGENTA}============================================${NC}"
+    echo -e "${MAGENTA}     🔌 Verificando Conexão ADB${NC}"
+    echo -e "${MAGENTA}============================================${NC}"
+    echo ""
+    
+    # Verificar se ADB está instalado
+    if ! command -v adb &> /dev/null; then
+        echo -e "${RED}❌ ADB não encontrado!${NC}"
+        echo -e "${YELLOW}Instalando android-tools...${NC}"
+        pkg install android-tools -y
+        echo ""
+    fi
+    
+    # Verificar se dispositivo está conectado
+    echo -e "${YELLOW}📱 Verificando dispositivos conectados...${NC}"
+    adb devices
+    echo ""
+    
+    # Contar dispositivos conectados
+    local device_count=$(adb devices | grep -c "device$")
+    
+    if [ "$device_count" -eq 0 ]; then
+        echo ""
+        echo -e "${RED}❌ ADB NÃO PAREADO!${NC}"
+        echo ""
+        echo -e "${YELLOW}Para conectar o dispositivo:${NC}"
+        echo "1️⃣ Ative 'Depuração USB' nas Opções de Desenvolvedor"
+        echo "2️⃣ Conecte o USB ao dispositivo"
+        echo "3️⃣ Execute novamente"
+        echo ""
+        echo -e "${YELLOW}Ou para conectar via WiFi:${NC}"
+        echo "   adb tcpip 5555"
+        echo "   adb connect SEU_IP:5555"
+        echo ""
+        exit 1
+    fi
+    
+    echo -e "${GREEN}✅ ADB pareado e conectado!${NC}"
+    echo ""
+}
+
 # Função: Atualizar Sistema
 atualizar() {
     echo -e "${YELLOW}🔄 Atualizando pacotes...${NC}"
@@ -46,11 +92,6 @@ limpar_cache() {
 aplicar_system_props() {
     echo -e "${YELLOW}⚙️ Aplicando System Props...${NC}"
     
-    if ! command -v adb &> /dev/null; then
-        echo -e "${RED}❌ ADB não encontrado!${NC}"
-        return 1
-    fi
-    
     echo "📱 Aplicando propriedades do sistema..."
     adb shell setprop debug.sf.enable_adpf_cpu_hint true 2>/dev/null
     adb shell setprop debug.sf.use_phase_offsets_as_durations 1 2>/dev/null
@@ -62,15 +103,10 @@ aplicar_system_props() {
 otimizar_gpu() {
     echo -e "${YELLOW}🎮 Otimizando GPU/OpenGL...${NC}"
     
-    if ! command -v adb &> /dev/null; then
-        echo -e "${RED}❌ ADB não encontrado!${NC}"
-        return 1
-    fi
-    
     echo "🎨 Configurando otimizações de renderização..."
     
-    # Otimização de Hz
-    adb shell cmd device_config put activity_manager ro.display.ninetyhz.optimizer enable 2>/dev/null
+    # Otimização de Hz - Mudado para 120Hz
+    adb shell cmd device_config put activity_manager ro.display.120hz.optimizer enable 2>/dev/null
     adb shell cmd device_config put activity_manager ro.display.hz.optimizer enable 2>/dev/null
     
     # OpenGL Configs
@@ -91,17 +127,12 @@ otimizar_gpu() {
     adb shell cmd device_config put activity_manager CL_DEVICE_IMAGE3D_MAX_WIDTH 16384 2>/dev/null
     adb shell cmd device_config put activity_manager CL_DEVICE_LOCAL_MEM_SIZE 32768 2>/dev/null
     
-    echo -e "${GREEN}✅ GPU/OpenGL otimizado!${NC}"
+    echo -e "${GREEN}✅ GPU/OpenGL otimizado (120Hz)!${NC}"
 }
 
 # Função: Otimizar Input/Latência
 otimizar_input() {
     echo -e "${YELLOW}⚡ Otimizando Input/Latência de Toque...${NC}"
-    
-    if ! command -v adb &> /dev/null; then
-        echo -e "${RED}❌ ADB não encontrado!${NC}"
-        return 1
-    fi
     
     echo "👆 Configurando latência de entrada..."
     
@@ -115,20 +146,17 @@ otimizar_input() {
     adb shell cmd device_config put input_native_boot enable_touch_resampling true 2>/dev/null
     adb shell cmd device_config put input_native_boot touch_slop 1 2>/dev/null
     
+    # Long Press Timeout e Multi Press Timeout
+    echo "⏱️ Ajustando timeouts de toque..."
+    adb shell settings put secure long_press_timeout 100 2>/dev/null
+    adb shell settings put secure multi_press_timeout 10 2>/dev/null
+    
     echo -e "${GREEN}✅ Input/Latência otimizado!${NC}"
 }
 
 # Função: Otimizar ADB Completo
 otimizar_adb() {
     echo -e "${YELLOW}⚡ Otimização Completa via ADB...${NC}"
-    
-    if ! command -v adb &> /dev/null; then
-        echo -e "${RED}❌ ADB não encontrado! Instale com: pkg install android-tools${NC}"
-        return 1
-    fi
-    
-    echo "📱 Dispositivos conectados:"
-    adb devices
     
     echo "🧹 Limpando cache do sistema..."
     adb shell pm trim-caches 1024M 2>/dev/null
@@ -156,16 +184,12 @@ verificar_espaco() {
 status_dispositivo() {
     echo -e "${YELLOW}📱 Status do Dispositivo:${NC}"
     
-    if command -v adb &> /dev/null; then
-        echo "🔋 Bateria:"
-        adb shell dumpsys battery 2>/dev/null | grep -E "level|temperature"
-        
-        echo ""
-        echo "💾 Armazenamento:"
-        adb shell df -h 2>/dev/null | grep "/storage"
-    else
-        echo -e "${RED}❌ ADB não disponível${NC}"
-    fi
+    echo "🔋 Bateria:"
+    adb shell dumpsys battery 2>/dev/null | grep -E "level|temperature"
+    
+    echo ""
+    echo "💾 Armazenamento:"
+    adb shell df -h 2>/dev/null | grep "/storage"
 }
 
 # Função: Menu Principal
@@ -174,7 +198,7 @@ menu() {
     echo -e "${MAGENTA}============================================${NC}"
     echo -e "${MAGENTA}     🚀 RemorseTool - Otimização${NC}"
     echo -e "${MAGENTA}     Termux + ADB Integration${NC}"
-    echo -e "${MAGENTA}     v1.0 - Performance Edition${NC}"
+    echo -e "${MAGENTA}     v1.2 - Performance Edition${NC}"
     echo -e "${MAGENTA}============================================${NC}"
     echo ""
     echo "🔧 LIMPEZA & SISTEMA:"
@@ -184,7 +208,7 @@ menu() {
     echo ""
     echo "⚡ OTIMIZAÇÕES AVANÇADAS:"
     echo "4) ⚙️  Aplicar System Props"
-    echo "5) 🎮 Otimizar GPU/OpenGL"
+    echo "5) 🎮 Otimizar GPU/OpenGL (120Hz)"
     echo "6) ⚡ Otimizar Input/Latência"
     echo "7) 🔧 Otimização ADB Completa"
     echo ""
@@ -251,6 +275,9 @@ menu() {
 # ============================================
 # MAIN
 # ============================================
+
+# Verificação obrigatória de ADB PRIMEIRO
+verificar_adb_obrigatorio
 
 # Verificar se é primeira execução
 if [ "$1" = "--auto" ]; then
