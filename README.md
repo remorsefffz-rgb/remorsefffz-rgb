@@ -3,8 +3,7 @@
 <p align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://i.imgur.com/QRlCrO3.png">
-  <source media="(prefers-color-scheme: light)" srcset="https://i.imgur.com/QRlCrO3.png">
+  <source
   <img alt="ReadmeAI Logo" src="https://i.imgur.com/QRlCrO3.png" width="60%">
 </picture>
 
@@ -55,13 +54,13 @@ pkg update && pkg upgrade -y && pkg reinstall curl libcurl && pkg install androi
 <img src="https://i.imgur.com/NnWf7Fm.png" alt="line break" width="100%" height="3px">
 
 
-## Detecções
+## otimização
 
 
 
 | Detecções               | Descrição                                   |
 |----------------------|-----------------------------------------------|
-| `Verificação da instalação do FreeFire`            | Verificar se o jogo está instalado                      | `center`           
+| `otimizaçao automática`            | otimizar e aplicar mira clean automática                   | `center`           
 | `Versão Android`      | Verifica a versão do Android          
 
 
